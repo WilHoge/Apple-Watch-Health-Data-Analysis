@@ -1,0 +1,119 @@
+---
+title: "analyze-health"
+output: html_document
+---
+
+Initialize R
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+
+Read data
+
+```{r}
+data=read.csv("Health Data.csv")
+colnames(data) = c("Start", "Finish", "cal", "distance", "hr", "steps")
+```
+
+Convert data
+
+```{r}
+data$day = as.Date(sub("\\.","",data$Start),"%d-%b-%Y")
+data$hour = as.numeric(substring(sub(".* ","", data$Start),1,2))
+month_ordered = c("Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez")
+data$month = ordered(format(data$day, "%b"), levels=month_ordered)
+weekdays_ordered=c("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+data$weekday = ordered(weekdays(data$day), levels=weekdays_ordered)
+reldata = data[data$day >= "2015-05-01" & data$day <= "2015-08-31", c("day","month","hour","weekday","cal","distance","hr","steps")]
+
+reldata_byday = group_by(reldata, day)
+reldata_day = summarise(reldata_byday, steps=sum(steps), cal=sum(cal))
+reldata_active = reldata[reldata$hr>0,]
+reldata_active_byday = group_by(reldata_active, day)
+reldata_active_day = summarise(reldata_active_byday, weekday=max(weekday),minhr=min(hr),maxhr=max(hr),meanhr=mean(hr),active=n())
+reldata_day=inner_join(reldata_day, reldata_active_day)
+rm(reldata_byday,reldata_active,reldata_active_byday,reldata_active_day)
+
+active_hoursHR = reldata[reldata$hr > 0 & reldata$hr<180,]
+active_hoursSteps = reldata[reldata$steps > 0,]
+active_hoursCal = reldata[reldata$cal > 0,]
+reldataWE = reldata[reldata$weekday == "Samstag" | reldata$weekday == "Sonntag",]
+
+```
+
+Basic statistics
+
+```{r, echo=FALSE}
+a = nrow(reldata_day)
+sprintf("Number of days used: %d", a)
+
+a = mean(reldata_day$active)
+sprintf("Average active hours per day: %.1f", a)
+
+a = mean(reldata_day$cal)
+sprintf("Average activity calories per day: %.1f", a)
+
+a = reldata_day[reldata_day$cal < 400,]
+sprintf("Number of days I have not achieved activity goal of 400: %d (%.0f%%)", nrow(a), 100*nrow(a)/nrow(reldata_day))
+a = reldata_day[reldata_day$cal < 300,]
+sprintf("Number of days I have not achieved 300: %d (%.0f%%)", nrow(a), 100*nrow(a)/nrow(reldata_day))
+a = reldata_day[reldata_day$cal >= 800,]
+sprintf("Number of days I overachieved my activity goal (2x400): %d", nrow(a))
+
+a = max(reldata_day$cal)
+sprintf("Most active day: %s", format(reldata_day[reldata_day$cal==a,"day"],"%d.%m.%Y"))
+
+sprintf("Summary of HR:")
+summary(active_hoursHR$hr)
+
+print("Summary of steps")
+summary(active_hoursSteps$steps)
+```
+
+Some Plots
+
+```{r}
+
+ggplot(data=active_hoursSteps, aes(x=weekday), fill=weekday) + geom_bar() + labs(title="Active hours per weekday")
+
+ggplot(data=active_hoursSteps, aes(x=weekday, y=steps), color=month) + geom_bar(stat = "identity") + labs(title="Steps per weekday")
+
+ggplot(data=active_hoursHR, aes(x=day, y=hr)) + geom_point(color="grey") + stat_smooth() + ggtitle("average HR")
+
+ggplot(data=active_hoursSteps, aes(x=day, y=steps)) + geom_point(color="grey") + stat_smooth() + ggtitle("Average steps per hour")
+
+ggplot(data=active_hoursCal, aes(x=day, y=cal)) + geom_point(color="grey") + stat_smooth() + ggtitle("Average calories per hour")
+
+ggplot(data=reldata, aes(x=factor(hour), y=cal)) + 
+  labs(title="Activity calories per hour",x="hour") +
+  geom_boxplot(color="red", fill="lightgreen") + ylim(0,100) +
+  geom_point(color="blue",alpha=.5)
+
+ggplot(data=reldataWE, aes(x=factor(hour), y=cal)) + 
+  labs(title="Activity calories per hour (weekend)",x="hour") +
+  geom_boxplot(color="red", fill="lightgreen") + ylim(0,100) +
+  geom_point(color="blue",alpha=.5)
+
+qplot(weekday, steps, data=reldata_day, geom=c("boxplot", "jitter"), main="Steps per weekday", xlab="weekday", ylab="Steps")
+
+qplot(weekday, cal, data=reldata_day, geom=c("boxplot", "jitter"), main="Activity calories per weekday", xlab="weekday", ylab="Cal")
+
+ggplot(data=reldata_day, aes(x=day, y=meanhr)) + 
+  geom_point(color="darkgrey") + 
+  stat_smooth(aes(x=day,y=meanhr), color="black") +
+  geom_point(aes(x=day, y=maxhr), color="red") + 
+  stat_smooth(aes(x=day,y=maxhr), color="red", fill="red") +
+  geom_point(aes(x=day, y=minhr), color="green") + 
+  stat_smooth(aes(x=day, y=minhr),color="green",fill="green",alpha=.2) +
+  ggtitle("HR comparison - max(red) average(black) min(green)") +
+  ylim(50,150)
+
+ggplot(data=reldata_day, aes(x=day,y=active)) + geom_point() + stat_smooth() + ggtitle("Active hours per day")
+
+ggplot(data=reldata_day, aes(x=day,y=cal)) + geom_point() + stat_smooth() + ggtitle("Activity calories per day") + geom_line(y=400, color="red")
+
+```
+

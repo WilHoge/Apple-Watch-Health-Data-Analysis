@@ -1,5 +1,7 @@
 ---
-title: "analyze-health"
+title: "analyze-health.Rmd"
+author: "Wilfried Hoge"
+date: "12. September 2015"
 output: html_document
 ---
 

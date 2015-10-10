@@ -1,0 +1,159 @@
+---
+title: "analyze-health-detail.Rmd"
+author: "Wilfried Hoge"
+date: "10. Oktober 2015"
+output: html_document
+---
+
+Initialization
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+Sys.setlocale("LC_TIME", "C")
+
+```
+
+
+Prepare HR data
+
+```{r}
+
+hr = read.csv("Heart Rate.csv", col.names = c("Start", "Finish", "hr"))
+
+hr$date = as.Date(substr(hr$Start,1,11),"%d-%b-%Y")
+hr$hour = as.integer(substr(hr$Start,13,14))
+hr$min  = as.integer(substr(hr$Start,16,17))
+hr$ver  = factor(ifelse (hr$date < "2015-05-19", "1.0", ifelse (hr$date < "2015-09-21", "1.1", "2.0")))
+hr = hr[hr$date > "2015-04-20",c("date", "hour", "min", "hr", "ver")]
+
+hr.min  = hr %>% group_by(date, hour, min) %>% summarize(hr=mean(hr), n=n(), ver=first(ver))
+hr.hour = hr %>% group_by(date, hour) %>% summarize(hr=mean(hr), n=n(), ver=first(ver))
+hr.day  = hr %>% group_by(date) %>% summarize(hr=mean(hr), n=n(), ver=first(ver))
+hr.day.low  = hr.hour[hr.hour$n<7,] %>% group_by(date) %>% summarize(hr=mean(hr), n=sum(n), ver=first(ver))
+
+```
+
+Analyze HR data
+
+```{r}
+
+
+ggplot(data=hr, aes(x=date, y=hr)) + geom_point(alpha=.3, aes(color=ver)) +
+  ggtitle("HR measures for each day")
+
+ggplot(data=hr.min, aes(x=date, y=n)) + geom_jitter(alpha=.5) + 
+  ylim(1,3) + 
+  geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-05-19"))))) + 
+  geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-09-21"))))) +
+  ggtitle("Number of measures per minute")
+
+ggplot(data=hr.hour, aes(x=date, y=n)) + geom_jitter(alpha=.5, color="orange") + ylim(1,10) + 
+  geom_line(stat="summary", fun.y=mean, aes(color=ver)) +
+  ggtitle("Number of measures per hour")
+
+ggplot(data=hr.hour, aes(x=date, y=n)) + geom_jitter(alpha=.5, color="orange") + ylim(1,10) + 
+  ggtitle("Number of measures per hour")
+
+ggplot(data=hr.hour, aes(x=date, y=n)) + ylim(1,10) + 
+  geom_line(stat="summary", fun.y=mean, aes(color=ver)) +
+  ggtitle("Number of measures per hour")
+
+ggplot(data=subset(hr.hour,n<6), aes(x=date, y=hr)) + geom_point(alpha=.4, aes(color=ver)) + geom_smooth() +
+  ggtitle("Average HR per hour")
+
+hr.day.low %>% group_by(ver) %>% summarise(mean=mean(hr), median=median(hr))
+
+```
+
+Prepare Steps data
+
+```{r}
+
+steps = read.csv("Steps.csv", col.names=c("Start", "Finish", "steps"))
+steps$date = as.Date(substr(steps$Finish,1,11),"%d-%b-%Y")
+steps$hour = as.integer(substr(steps$Finish,13,14))
+steps$min  = as.integer(substr(steps$Finish,16,17))
+steps$ver  = factor(ifelse (steps$date < "2015-05-19", "1.0", ifelse (steps$date < "2015-09-21", "1.1", "2.0")))
+steps = steps[steps$date > "2015-04-20",c("date", "hour", "min", "steps", "ver")]
+
+steps.min  = steps %>% group_by(date, hour, min) %>% summarize(steps=sum(steps), n=n(), ver=first(ver))
+steps.hour = steps %>% group_by(date, hour) %>% summarize(steps=sum(steps), n=n(), ver=first(ver))
+steps.day  = steps %>% group_by(date) %>% summarize(steps=sum(steps), n=n(), ver=first(ver))
+
+```
+
+Analyze Steps data
+
+```{r}
+
+ggplot(data=steps.min, aes(x=date, y=n)) + geom_jitter(alpha=.5) + 
+  geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-05-19"))))) + 
+  geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-09-21"))))) +
+  ggtitle("Number of measures per minute")
+
+ggplot(data=steps.hour, aes(x=date, y=n)) + geom_jitter(alpha=.5, color="orange") + ylim(1,10) + 
+  ggtitle("Number of measures per hour")
+
+ggplot(data=steps.hour, aes(x=date, y=n)) + ylim(1,10) + 
+  geom_line(stat="summary", fun.y=mean, aes(color=ver)) +
+  ggtitle("Number of measures per hour")
+
+ggplot(data=steps.hour, aes(x=date, y=hour, fill=steps)) + geom_tile() +
+    scale_fill_gradientn(colours = colorRampPalette(c("orange", "red"))(3))
+
+```
+
+
+Prepare data for Active Calories
+
+```{r}
+
+cal = read.csv("Active Calories.csv", col.names=c("Start", "Finish", "cal"))
+cal$date = as.Date(substr(cal$Finish,1,11),"%d-%b-%Y")
+cal$hour = as.integer(substr(cal$Finish,13,14))
+cal$min  = as.integer(substr(cal$Finish,16,17))
+cal$ver  = factor(ifelse (cal$date < "2015-05-19", "1.0", ifelse (cal$date < "2015-09-21", "1.1", "2.0")))
+cal = cal[cal$date > "2015-04-20",c("date", "hour", "min", "cal", "ver")]
+
+cal.min  = cal %>% group_by(date, hour, min) %>% summarize(cal=sum(cal), n=n(), ver=first(ver))
+cal.hour = cal %>% group_by(date, hour) %>% summarize(cal=sum(cal), n=n(), ver=first(ver))
+cal.day  = cal %>% group_by(date) %>% summarize(cal=sum(cal), n=n(), ver=first(ver))
+cal.day$level = factor(ifelse(cal.day$cal>=400,"above","below"))
+
+```
+
+Analyze data for Activity Calories
+
+```{r}
+
+ggplot(data=cal.min, aes(x=date, y=n)) + geom_jitter(alpha=.5) + 
+  geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-05-19"))))) + 
+  geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-09-21"))))) +
+  ggtitle("Number of measures per minute")
+
+ggplot(data=cal.hour, aes(x=date, y=n)) + geom_jitter(alpha=.5, color="orange") +
+  ggtitle("Number of measures per hour")
+
+ggplot(data=cal.hour, aes(x=date, y=n)) + ylim(1,10) + 
+  geom_line(stat="summary", fun.y=mean, aes(color=ver)) +
+  ggtitle("Number of measures per hour")
+
+ggplot(data=cal.hour, aes(x=date, y=hour, fill=cal)) + geom_tile() + ylim(23,0) +
+    scale_fill_gradientn(colours = colorRampPalette(c("white", "red"))(5)) +
+    geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-05-19"))))) + 
+    geom_vline(linetype=4, color="red", aes(xintercept=as.numeric(as.Date(c("2015-09-21")))))
+
+ggplot(data=cal.day, aes(x=format(date, "%m"), y=as.integer(format(date, "%d")), fill=cal)) + geom_tile() +
+  scale_fill_gradientn(colours = colorRampPalette(c("white", "red"))(3)) + ylim(31,1) +
+  ggtitle("Activity Calories per day") +
+  xlab("Month") + ylab("Day")
+
+ggplot(data=cal.day, aes(x=format(date, "%m"), y=as.integer(format(date, "%d")), fill=level)) + geom_tile() +
+  scale_fill_manual(values = c("orange", "mediumblue")) + ylim(31,1) +
+  ggtitle("Activity Calories per day") +
+  xlab("Month") + ylab("Day")
+
+```

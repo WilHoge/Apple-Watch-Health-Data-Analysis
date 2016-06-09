@@ -10,6 +10,8 @@ Initialize R
 ```{r}
 library(ggplot2)
 library(dplyr)
+
+Sys.setlocale("LC_TIME", "C")
 ```
 
 
@@ -25,11 +27,11 @@ Convert data
 ```{r}
 data$day = as.Date(sub("\\.","",data$Start),"%d-%b-%Y")
 data$hour = as.numeric(substring(sub(".* ","", data$Start),1,2))
-month_ordered = c("Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez")
+month_ordered = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 data$month = ordered(format(data$day, "%b"), levels=month_ordered)
-weekdays_ordered=c("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+weekdays_ordered=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 data$weekday = ordered(weekdays(data$day), levels=weekdays_ordered)
-reldata = data[data$day >= "2015-05-01" & data$day <= "2015-08-31", c("day","month","hour","weekday","cal","distance","hr","steps")]
+reldata = data[data$day >= "2015-05-01" & data$day <= "2016-05-31", c("day","month","hour","weekday","cal","distance","hr","steps")]
 
 reldata_byday = group_by(reldata, day)
 reldata_day = summarise(reldata_byday, steps=sum(steps), cal=sum(cal))
@@ -42,7 +44,7 @@ rm(reldata_byday,reldata_active,reldata_active_byday,reldata_active_day)
 active_hoursHR = reldata[reldata$hr > 0 & reldata$hr<180,]
 active_hoursSteps = reldata[reldata$steps > 0,]
 active_hoursCal = reldata[reldata$cal > 0,]
-reldataWE = reldata[reldata$weekday == "Samstag" | reldata$weekday == "Sonntag",]
+reldataWE = reldata[reldata$weekday == "Saturday" | reldata$weekday == "Sunday",]
 
 ```
 

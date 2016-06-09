@@ -26,7 +26,7 @@ hr = read.csv("Heart Rate.csv", col.names = c("Start", "Finish", "hr"))
 hr$date = as.Date(substr(hr$Start,1,11),"%d-%b-%Y")
 hr$hour = as.integer(substr(hr$Start,13,14))
 hr$min  = as.integer(substr(hr$Start,16,17))
-hr$ver  = factor(ifelse (hr$date < "2015-05-19", "1.0", ifelse (hr$date < "2015-09-21", "1.1", "2.0")))
+hr$ver  = factor(ifelse (hr$date < "2015-05-19", "1.0", ifelse (hr$date < "2015-09-21", "1.1", ifelse(hr$date < "2015-10-21", "2.0", ifelse(hr$date < "2015-12-08", "2.0.1", ifelse(hr$date < "2016-03-21", "2.1", ifelse(hr$date < "2016-05-16", "2.2", "2.2.1")))))))
 hr = hr[hr$date > "2015-04-20",c("date", "hour", "min", "hr", "ver")]
 
 hr.min  = hr %>% group_by(date, hour, min) %>% summarize(hr=mean(hr), n=n(), ver=first(ver))
